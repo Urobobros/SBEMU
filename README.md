@@ -82,6 +82,10 @@ GCC 12.2.0, but in the future newer GCC versions might become available:
 
 * https://github.com/andrewwutw/build-djgpp/releases
 
+After downloading a release, extract it to a directory of your choice and
+ensure the toolchain's `bin` folder is in your `PATH` so that
+`i586-pc-msdosdjgpp-gcc` is available.
+
 ### Installing make
 
 This assumes a Debian/Ubuntu installation. If you are using any other
