@@ -50,7 +50,15 @@ static uint8_t SBEMU_WS;
 static uint8_t SBEMU_RS = 0x2A;
 static uint8_t SBEMU_TestReg;
 static uint8_t SBEMU_DMAID_A;
-static uint8_t SBEMU_DMAID_X;
+static int SBEMU_DMAID_Count = 0;
+
+static const int SBEMU_DMAID_Table[4][9] =
+{
+    {  0x01, -0x02, -0x04,  0x08, -0x10,  0x20,  0x40, -0x80, -106 },
+    { -0x01,  0x02, -0x04,  0x08,  0x10, -0x20,  0x40, -0x80,  165 },
+    { -0x01,  0x02,  0x04, -0x08,  0x10, -0x20, -0x40,  0x80, -151 },
+    {  0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90 },
+};
 static uint8_t SBEMU_UseTimeConst = 0;
 static uint8_t SBEMU_TimeConst = 0;
 static uint16_t SBEMU_DSPVER = 0x0302;
@@ -217,7 +225,7 @@ void SBEMU_DSP_Reset(uint16_t port, uint8_t value)
         SBEMU_DirectCount = 0;
         SBEMU_DirectBuffer[0] = 0;
         SBEMU_DMAID_A = 0xAA;
-        SBEMU_DMAID_X = 0x96;
+        SBEMU_DMAID_Count = 0;
         SBEMU_UseTimeConst = 0;
 
         //SBEMU_Mixer_WriteAddr(0, SBEMU_MIXERREG_RESET);
@@ -471,11 +479,16 @@ void SBEMU_DSP_Write(uint16_t port, uint8_t value)
             break;
             case SBEMU_CMD_DSP_DMA_ID:
             {
-                SBEMU_DMAID_A += value ^ SBEMU_DMAID_X;
-                SBEMU_DMAID_X = (SBEMU_DMAID_X >> 2u) | (SBEMU_DMAID_X << 6u);
+                SBEMU_DMAID_A = 0;
+                for(int c = 0; c < 8; ++c)
+                {
+                    if(value & (1 << c))
+                        SBEMU_DMAID_A += SBEMU_DMAID_Table[SBEMU_DMAID_Count & 3][c];
+                }
+                SBEMU_DMAID_A += SBEMU_DMAID_Table[SBEMU_DMAID_Count & 3][8];
+                SBEMU_DMAID_Count++;
                 SBEMU_DSPCMD_Subindex = 2;
-
-                SBEMU_ExtFuns->DMA_Write(SBEMU_DMA, SBEMU_DMAID_A);
+                SBEMU_ExtFuns->DMA_Write(SBEMU_DMA, (uint8_t)SBEMU_DMAID_A);
             }
             break;
             case SBEMU_DSPCMD_SKIP1:
