@@ -82,6 +82,18 @@ GCC 12.2.0, but in the future newer GCC versions might become available:
 
 * https://github.com/andrewwutw/build-djgpp/releases
 
+For convenience this repository ships a helper script that installs the
+prebuilt toolchain used by the CI workflows. Run it with superuser
+rights to place the cross compiler in `/opt/djgpp`:
+
+```
+sudo ./scripts/install-djgpp.sh /opt/djgpp
+source /opt/djgpp/setenv
+```
+
+You can replace the target directory with any other path if you do not
+want to use `/opt/djgpp`.
+
 ### Installing make
 
 This assumes a Debian/Ubuntu installation. If you are using any other
