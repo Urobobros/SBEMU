@@ -49,8 +49,25 @@ static uint8_t SBEMU_idbyte;
 static uint8_t SBEMU_WS;
 static uint8_t SBEMU_RS = 0x2A;
 static uint8_t SBEMU_TestReg;
-static uint8_t SBEMU_DMAID_A;
+/*
+ * DMA identification algorithm used by DSP command E2h.
+ *
+ * The constants and algorithm come from the "Sound Blaster Series
+ * Hardware Programming Guide" (Creative Technology).  Each received
+ * byte is evaluated against one of four rows of signed values and the
+ * results accumulate in SBEMU_DMAID_A.  See the manual's command E2h
+ * documentation for a full description.
+ */
+static const int8_t SBEMU_DMAID_Table[4][9] = {
+    { 0x01, -0x02, -0x04,  0x08, -0x10,  0x20,  0x40, -0x80, -106 },
+    { -0x01,  0x02, -0x04,  0x08,  0x10, -0x20,  0x40, -0x80,  165 },
+    { -0x01,  0x02,  0x04, -0x08,  0x10, -0x20, -0x40,  0x80, -151 },
+    { 0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90 }
+};
+
+static int16_t SBEMU_DMAID_A;
 static uint8_t SBEMU_DMAID_X;
+static uint32_t SBEMU_DMAID_Count = 0;
 static uint8_t SBEMU_UseTimeConst = 0;
 static uint8_t SBEMU_TimeConst = 0;
 static uint16_t SBEMU_DSPVER = 0x0302;
@@ -218,6 +235,7 @@ void SBEMU_DSP_Reset(uint16_t port, uint8_t value)
         SBEMU_DirectBuffer[0] = 0;
         SBEMU_DMAID_A = 0xAA;
         SBEMU_DMAID_X = 0x96;
+        SBEMU_DMAID_Count = 0;
         SBEMU_UseTimeConst = 0;
 
         //SBEMU_Mixer_WriteAddr(0, SBEMU_MIXERREG_RESET);
@@ -471,11 +489,17 @@ void SBEMU_DSP_Write(uint16_t port, uint8_t value)
             break;
             case SBEMU_CMD_DSP_DMA_ID:
             {
-                SBEMU_DMAID_A += value ^ SBEMU_DMAID_X;
-                SBEMU_DMAID_X = (SBEMU_DMAID_X >> 2u) | (SBEMU_DMAID_X << 6u);
+                // Implementation based on the official DMA transfer
+                // identification algorithm (DSP command E2h).
+                for(int i = 0; i < 8; ++i)
+                    if(value & (1 << i))
+                        SBEMU_DMAID_A += SBEMU_DMAID_Table[SBEMU_DMAID_Count][i];
+                SBEMU_DMAID_A += SBEMU_DMAID_Table[SBEMU_DMAID_Count][8];
+                SBEMU_DMAID_Count = (SBEMU_DMAID_Count + 1) & 3;
                 SBEMU_DSPCMD_Subindex = 2;
 
-                SBEMU_ExtFuns->DMA_Write(SBEMU_DMA, SBEMU_DMAID_A);
+                SBEMU_ExtFuns->DMA_Write(SBEMU_DMA, (SBEMU_DMAID_A >> 8) & 0xFF);
+                SBEMU_ExtFuns->DMA_Write(SBEMU_DMA, SBEMU_DMAID_A & 0xFF);
             }
             break;
             case SBEMU_DSPCMD_SKIP1:
