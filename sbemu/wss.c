@@ -3,6 +3,8 @@
 // Modelled after the implementation in PCem but without actual audio output.
 
 #include "wss.h"
+#include "hdpmipt.h"
+#include "pic.h"
 
 static const int WSS_DMA_Map[4] = {0, 0, 1, 3};
 static const int WSS_IRQ_Map[8] = {5, 7, 9, 10, 11, 12, 14, 15};
@@ -56,4 +58,17 @@ int WSS_GetDMA(void)
 int WSS_GetIRQ(void)
 {
     return WSS_IRQ;
+}
+
+BOOL WSS_IRQFree(void)
+{
+    HDPMIPT_IRQRoutedHandle h;
+    if(!HDPMIPT_GetIRQRoutedHandlerH(WSS_IRQ, &h))
+        return FALSE;
+    if(h.cs == 0 && h.offset == 0 && h.rmcs == 0 && h.rmoffset == 0)
+    {
+        uint16_t mask = PIC_GetIRQMask();
+        return PIC_IS_IRQ_MASKED(mask, WSS_IRQ);
+    }
+    return FALSE;
 }
