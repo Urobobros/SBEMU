@@ -3,7 +3,7 @@
 // Modelled after the implementation in PCem but without actual audio output.
 
 #include "wss.h"
-#include "hdpmipt.h"
+#include "../hdpmipt.h"
 #include "pic.h"
 
 static const int WSS_DMA_Map[4] = {0, 0, 1, 3};
