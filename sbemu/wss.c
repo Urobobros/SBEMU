@@ -16,8 +16,8 @@ void WSS_Reset(void)
 {
     AD1848_Reset(&WSS_AD);
     WSS_Config = 0;
-    WSS_DMA = 0;
-    WSS_IRQ = 7;
+    WSS_DMA = 3; /* PCem defaults to DMA 3 */
+    WSS_IRQ = 7; /* PCem defaults to IRQ 7 */
 }
 
 uint8_t WSS_ReadPort(uint16_t port)

@@ -6,12 +6,22 @@ void AD1848_Reset(AD1848 *ad)
     memset(ad, 0, sizeof(*ad));
     ad->status = 0xcc;
     ad->mce = 0x40;
+    ad->regs[0] = 0x00;
+    ad->regs[1] = 0x00;
     ad->regs[2] = 0x80;
     ad->regs[3] = 0x80;
     ad->regs[4] = 0x80;
     ad->regs[5] = 0x80;
     ad->regs[6] = 0x80;
     ad->regs[7] = 0x80;
+    ad->regs[8] = 0x00;
+    ad->regs[9] = 0x08;
+    ad->regs[10] = 0x00;
+    ad->regs[11] = 0x00;
+    ad->regs[12] = 0x0a;
+    ad->regs[13] = 0x00;
+    ad->regs[14] = 0x00;
+    ad->regs[15] = 0x00;
 }
 
 uint8_t AD1848_Read(AD1848 *ad, uint16_t port)
