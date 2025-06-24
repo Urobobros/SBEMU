@@ -1,0 +1,14 @@
+#ifndef AD1848_EMU_H
+#define AD1848_EMU_H
+#include <stdint.h>
+
+typedef struct {
+    uint8_t index;
+    uint8_t regs[32];
+} AD1848;
+
+void AD1848_Reset(AD1848 *ad);
+uint8_t AD1848_Read(AD1848 *ad, uint16_t port);
+void AD1848_Write(AD1848 *ad, uint16_t port, uint8_t val);
+
+#endif // AD1848_EMU_H

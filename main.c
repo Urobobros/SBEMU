@@ -13,6 +13,7 @@
 #include <vdma.h>
 #include <virq.h>
 #include <sbemu.h>
+#include "wss.h"
 #include <untrapio.h>
 #include "qemm.h"
 #include "hdpmipt.h"
@@ -163,6 +164,12 @@ static uint32_t MAIN_SB_DSP_ReadStatus(uint32_t port, uint32_t val, uint32_t out
 static uint32_t MAIN_SB_DSP_ReadINT16BitACK(uint32_t port, uint32_t val, uint32_t out)
 {
     return out ? val : (val &=~0xFF, val |= SBEMU_DSP_INT16ACK(port));
+}
+
+static uint32_t MAIN_WSS(uint32_t port, uint32_t val, uint32_t out)
+{
+    return out ? (WSS_WritePort((uint16_t)port, (uint8_t)val), val)
+               : (val &= ~0xFF, val |= WSS_ReadPort((uint16_t)port));
 }
 
 int mpu_state = 0;
@@ -352,12 +359,23 @@ static QEMM_IODT MAIN_SB_IODT[13] =
     0x0F, &MAIN_SB_DSP_ReadINT16BitACK,
 };
 
+static QEMM_IODT MAIN_WSS_IODT[5] =
+{
+    0x530, &MAIN_WSS,
+    0x534, &MAIN_WSS,
+    0x535, &MAIN_WSS,
+    0x536, &MAIN_WSS,
+    0x537, &MAIN_WSS,
+};
+
 QEMM_IOPT OPL3IOPT;
 QEMM_IOPT OPL3IOPT_PM;
 QEMM_IOPT MPUIOPT;
 QEMM_IOPT MPUIOPT_PM;
 QEMM_IOPT MAIN_VDMA_IOPT;
 QEMM_IOPT MAIN_VIRQ_IOPT;
+QEMM_IOPT WSSIOPT;
+QEMM_IOPT WSSIOPT_PM;
 QEMM_IOPT MAIN_SB_IOPT;
 QEMM_IOPT MAIN_VDMA_IOPT_PM1;
 QEMM_IOPT MAIN_VDMA_IOPT_PM2;
@@ -567,6 +585,7 @@ update_serial_mpu_output()
 }
 
 static BOOL OPLRMInstalled, OPLPMInstalled, MPURMInstalled, MPUPMInstalled;
+static BOOL WSSRMInstalled, WSSPMInstalled;
 static HDPMIPT_IRQRoutedHandle OldRoutedHandle = HDPMIPT_IRQRoutedHandle_Default;
 static HDPMIPT_IRQRoutedHandle OldRoutedHandle5 = HDPMIPT_IRQRoutedHandle_Default;
 static HDPMIPT_IRQRoutedHandle OldRoutedHandle7 = HDPMIPT_IRQRoutedHandle_Default;
@@ -595,6 +614,10 @@ static void MAIN_Cleanup()
         QEMM_Uninstall_IOPortTrap(&MPUIOPT);
     if(MPUPMInstalled)
         HDPMIPT_Uninstall_IOPortTrap(&MPUIOPT_PM);
+    if(WSSRMInstalled)
+        QEMM_Uninstall_IOPortTrap(&WSSIOPT);
+    if(WSSPMInstalled)
+        HDPMIPT_Uninstall_IOPortTrap(&WSSIOPT_PM);
 
     IRQGUARD_Uninstall();
 }
@@ -904,6 +927,7 @@ int main(int argc, char* argv[])
         MAIN_SB_DSPVersion[MAIN_Options[OPT_TYPE].value],
         MAIN_Options[OPT_FIX_TC].value,
         &MAIN_SbemuExtFun);
+    WSS_Reset();
     VDMA_Virtualize(MAIN_Options[OPT_DMA].value, TRUE);
     VDMA_Virtualize(MAIN_Options[OPT_HDMA].value, TRUE);
     for(int i = 0; i < countof(MAIN_SB_IODT); ++i)
@@ -925,6 +949,9 @@ int main(int argc, char* argv[])
     }
     MAIN_Print_Enabled_Newline(true);
 
+    printf("Windows Sound System at address 530, IRQ %d, DMA %d: ", WSS_GetIRQ(), WSS_GetDMA());
+    MAIN_Print_Enabled_Newline(true);
+
     BOOL QEMMInstalledVDMA = !enableRM || QEMM_Install_IOPortTrap(MAIN_VDMA_IODT, countof(MAIN_VDMA_IODT), &MAIN_VDMA_IOPT);
     #if MAIN_TRAP_RMPIC_ONDEMAND//will crash with VIRQ installed, do it temporarily. TODO: figure out why
     BOOL QEMMInstalledVIRQ = TRUE;
@@ -932,6 +959,7 @@ int main(int argc, char* argv[])
     BOOL QEMMInstalledVIRQ = !enableRM || QEMM_Install_IOPortTrap(MAIN_VIRQ_IODT, countof(MAIN_VIRQ_IODT), &MAIN_VIRQ_IOPT);
     #endif
     BOOL QEMMInstalledSB = !enableRM || QEMM_Install_IOPortTrap(SB_Iodt, SB_IodtCount, &MAIN_SB_IOPT);
+    WSSRMInstalled = !enableRM || QEMM_Install_IOPortTrap(MAIN_WSS_IODT, countof(MAIN_WSS_IODT), &WSSIOPT);
 
     BOOL HDPMIInstalledVDMA1 = !enablePM || HDPMIPT_Install_IOPortTrap(0x0, 0xF, MAIN_VDMA_IODT, 16, &MAIN_VDMA_IOPT_PM1);
     BOOL HDPMIInstalledVDMA2 = !enablePM || HDPMIPT_Install_IOPortTrap(0x81, 0x83, MAIN_VDMA_IODT+16, 3, &MAIN_VDMA_IOPT_PM2);
@@ -947,6 +975,7 @@ int main(int argc, char* argv[])
     BOOL HDPMIInstalledVIRQ2 = !enablePM || HDPMIPT_Install_IOPortTrap(0xA0, 0xA1, MAIN_VIRQ_IODT+2, 2, &MAIN_VIRQ_IOPT_PM2);
     #endif
     BOOL HDPMIInstalledSB = !enablePM || HDPMIPT_Install_IOPortTrap(MAIN_Options[OPT_ADDR].value, MAIN_Options[OPT_ADDR].value+0x0F, SB_Iodt, SB_IodtCount, &MAIN_SB_IOPT_PM);
+    WSSPMInstalled = !enablePM || HDPMIPT_Install_IOPortTrap(0x530, 0x537, MAIN_WSS_IODT, countof(MAIN_WSS_IODT), &WSSIOPT_PM);
 
     BOOL TSR_ISR = FALSE;
     for(int i = MAIN_TSR_INTSTART_ID; i <= 0xFF; ++i)
@@ -1029,9 +1058,9 @@ int main(int argc, char* argv[])
 
     BOOL TSR = TRUE;
     if(!PM_ISR || !RM_ISR || !TSR_ISR
-    || !QEMMInstalledVDMA || !QEMMInstalledVIRQ || !QEMMInstalledSB
+    || !QEMMInstalledVDMA || !QEMMInstalledVIRQ || !QEMMInstalledSB || !WSSRMInstalled
     || !HDPMIInstalledVDMA1 || !HDPMIInstalledVDMA2 || !HDPMIInstalledVDMA3 || !HDPMIInstalledVHDMA1 || !HDPMIInstalledVHDMA2 || !HDPMIInstalledVHDMA3
-    || !HDPMIInstalledVIRQ1 || !HDPMIInstalledVIRQ2 || !HDPMIInstalledSB
+    || !HDPMIInstalledVIRQ1 || !HDPMIInstalledVIRQ2 || !HDPMIInstalledSB || !WSSPMInstalled
     || !(TSR=DPMI_TSR()))
     {
         if(!QEMMInstalledVDMA || !QEMMInstalledVIRQ || !QEMMInstalledSB)
@@ -1041,6 +1070,7 @@ int main(int argc, char* argv[])
         if(enableRM && QEMMInstalledVIRQ) QEMM_Uninstall_IOPortTrap(&MAIN_VIRQ_IOPT);
         #endif
         if(enableRM && QEMMInstalledSB) QEMM_Uninstall_IOPortTrap(&MAIN_SB_IOPT);
+        if(enableRM && WSSRMInstalled) QEMM_Uninstall_IOPortTrap(&WSSIOPT);
 
         if(!HDPMIInstalledVDMA1 || !HDPMIInstalledVDMA2 || !HDPMIInstalledVDMA3 || !HDPMIInstalledVHDMA1 || !HDPMIInstalledVHDMA2 || !HDPMIInstalledVHDMA3 || !HDPMIInstalledVIRQ1 || !HDPMIInstalledVIRQ2 || !HDPMIInstalledSB)
             MAIN_CPrintf(RED, "Error: Failed installing IO port trap for HDPMI.\n");
@@ -1055,6 +1085,7 @@ int main(int argc, char* argv[])
         if(enablePM && HDPMIInstalledVIRQ2) HDPMIPT_Uninstall_IOPortTrap(&MAIN_VIRQ_IOPT_PM2);
         #endif
         if(enablePM && HDPMIInstalledSB) HDPMIPT_Uninstall_IOPortTrap(&MAIN_SB_IOPT_PM);
+        if(enablePM && WSSPMInstalled) HDPMIPT_Uninstall_IOPortTrap(&WSSIOPT_PM);
 
         if(!PM_ISR)
             MAIN_CPrintf(RED, "Error: Failed installing sound card ISR.\n");

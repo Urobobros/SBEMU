@@ -41,6 +41,8 @@ Source code exists, but "doesn't work yet":
  * OPL3 FM via [DOSBox' OPL3 FM implementation](https://www.dosbox.com/)
  * OPL3 passthrough to Hardware FM if it's present on the PCI sound card.
  * MPU401 UART emulation, or passthrough to PCI sound card if supported.
+ * Basic Windows Sound System emulation with a configuration register and
+   AD1848 codec registers. IRQ and DMA lines are selectable.
 
 
 ## Requirements
@@ -81,6 +83,21 @@ to build DJGPP yourself. The current version (October 2023) is using
 GCC 12.2.0, but in the future newer GCC versions might become available:
 
 * https://github.com/andrewwutw/build-djgpp/releases
+
+Prebuilt binaries can be installed with helper scripts. On Linux run
+`scripts/install-djgpp-linux.sh`, on macOS run `scripts/install-djgpp-osx.sh`,
+and on Windows execute `scripts/install-djgpp-win.ps1` with PowerShell.
+All scripts accept an optional install path as the first argument. After
+extraction run `source /opt/djgpp/setenv` (or your chosen prefix) to update
+`PATH`, or add the prefix's `bin` directory to your `PATH` on Windows.
+
+Example on Linux:
+
+```shell
+bash scripts/install-djgpp-linux.sh
+source /opt/djgpp/setenv
+make
+```
 
 ### Installing make
 
@@ -142,6 +159,20 @@ processes to speed up building:
 
 After the build is done, you'll find the build result in a folder called
 `output`, i.e. `output/sbemu.exe`.
+
+### Testing with QEMU
+
+If you do not have access to real DOS hardware you can try SBEMU by booting the
+preconfigured FreeDOS image under QEMU:
+
+```shell
+unxz SBEMU-FD13-USB.img.xz
+qemu-system-i386 -drive file=SBEMU-FD13-USB.img,format=raw -device AC97
+```
+
+Replace `AC97` with `intel-hda` to check Intel HDA compatibility. Linux users
+may add `--enable-kvm` for hardware acceleration. See `user_instructions.md`
+for details on preparing bootable drives and other testing options.
 
 ## Feature usage
 
