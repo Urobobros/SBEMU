@@ -18,6 +18,8 @@ void WSS_Reset(void)
     WSS_Config = 0;
     WSS_DMA = 3; /* PCem defaults to DMA 3 */
     WSS_IRQ = 7; /* PCem defaults to IRQ 7 */
+    AD1848_SetDMA(&WSS_AD, WSS_DMA);
+    AD1848_SetIRQ(&WSS_AD, WSS_IRQ);
 }
 
 uint8_t WSS_ReadPort(uint16_t port)
@@ -36,6 +38,8 @@ void WSS_WritePort(uint16_t port, uint8_t value)
         WSS_Config = value;
         WSS_DMA = WSS_DMA_Map[value & 3];
         WSS_IRQ = WSS_IRQ_Map[(value >> 3) & 7];
+        AD1848_SetDMA(&WSS_AD, WSS_DMA);
+        AD1848_SetIRQ(&WSS_AD, WSS_IRQ);
         return;
     }
     if(port >= 0x534 && port <= 0x537)

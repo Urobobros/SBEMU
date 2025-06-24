@@ -55,3 +55,13 @@ void AD1848_Write(AD1848 *ad, uint16_t port, uint8_t val)
             break;
     }
 }
+
+void AD1848_SetDMA(AD1848 *ad, int dma)
+{
+    ad->dma = dma;
+}
+
+void AD1848_SetIRQ(AD1848 *ad, int irq)
+{
+    ad->irq = irq;
+}
