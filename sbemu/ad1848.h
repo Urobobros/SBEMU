@@ -4,6 +4,9 @@
 
 typedef struct {
     uint8_t index;
+    uint8_t trd;
+    uint8_t mce;
+    uint8_t status;
     uint8_t regs[32];
 } AD1848;
 

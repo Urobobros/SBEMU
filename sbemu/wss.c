@@ -3,7 +3,6 @@
 // Modelled after the implementation in PCem but without actual audio output.
 
 #include "wss.h"
-#include <string.h>
 
 static const int WSS_DMA_Map[4] = {0, 0, 1, 3};
 static const int WSS_IRQ_Map[8] = {5, 7, 9, 10, 11, 12, 14, 15};
@@ -15,7 +14,7 @@ static AD1848 WSS_AD;
 
 void WSS_Reset(void)
 {
-    memset(&WSS_AD, 0, sizeof(WSS_AD));
+    AD1848_Reset(&WSS_AD);
     WSS_Config = 0;
     WSS_DMA = 0;
     WSS_IRQ = 7;
