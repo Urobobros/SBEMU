@@ -950,7 +950,8 @@ int main(int argc, char* argv[])
     MAIN_Print_Enabled_Newline(true);
 
     printf("Windows Sound System at address 530, IRQ %d, DMA %d: ", WSS_GetIRQ(), WSS_GetDMA());
-    MAIN_Print_Enabled_Newline(true);
+    BOOL wssFree = WSS_IRQFree();
+    MAIN_Print_Enabled_Newline(wssFree);
 
     BOOL QEMMInstalledVDMA = !enableRM || QEMM_Install_IOPortTrap(MAIN_VDMA_IODT, countof(MAIN_VDMA_IODT), &MAIN_VDMA_IOPT);
     #if MAIN_TRAP_RMPIC_ONDEMAND//will crash with VIRQ installed, do it temporarily. TODO: figure out why
