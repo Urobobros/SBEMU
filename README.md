@@ -143,6 +143,13 @@ processes to speed up building:
 After the build is done, you'll find the build result in a folder called
 `output`, i.e. `output/sbemu.exe`.
 
+Alternatively you can run the provided helper script which downloads a
+DJGPP cross‑compiler on demand and builds SBEMU automatically:
+
+```bash
+./build.sh cross
+```
+
 ## Feature usage
 
 ### CD Audio
