@@ -93,8 +93,10 @@ SBEMU_SRC := sbemu/dbopl.cpp \
 	     sbemu/untrapio.c \
 	     sbemu/vdma.c \
 	     sbemu/virq.c \
-	     sbemu/serial.c \
-	     sbemu/dpmi/xms.c \
+            sbemu/serial.c \
+            sbemu/wss.c \
+            sbemu/ad1848.c \
+            sbemu/dpmi/xms.c \
 	     sbemu/dpmi/dpmi.c \
 	     sbemu/dpmi/dbgutil.c \
 	     sbemu/dpmi/dpmi_dj2.c \
