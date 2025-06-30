@@ -174,6 +174,14 @@ Replace `AC97` with `intel-hda` to check Intel HDA compatibility. Linux users
 may add `--enable-kvm` for hardware acceleration. See `user_instructions.md`
 for details on preparing bootable drives and other testing options.
 
+=======
+Alternatively you can run the provided helper script which downloads a
+DJGPP cross‑compiler on demand and builds SBEMU automatically:
+
+```bash
+./build.sh cross
+```
+
 ## Feature usage
 
 ### CD Audio
